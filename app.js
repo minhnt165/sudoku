@@ -275,6 +275,7 @@ if (typeof document !== 'undefined') {
     const STORAGE_KEY = 'sudoku-vn-save-v1';
     const PROGRESS_KEY = 'sudoku-vn-progress-v1';
     const MAX_MISTAKES = 3;
+    const MAX_HINTS = 1; // số lượt gợi ý mỗi ván
 
     // Thứ tự độ khó tăng dần. `unlockWins`: số ván phải thắng ở độ khó liền
     // trước để mở khóa độ khó này (độ khó đầu tiên luôn mở).
@@ -292,6 +293,7 @@ if (typeof document !== 'undefined') {
     let selected = -1; // ô đang chọn (-1 = chưa chọn)
     let notesMode = false;
     let timerId = null;
+    let hintView = null; // gợi ý đang hiển thị: { idx, value, technique, text, reason[], unit[] }
     let progress = loadProgress(); // { wins: { easy: n, ... } }
 
     function createState(difficulty, puzzle, solution) {
@@ -304,6 +306,7 @@ if (typeof document !== 'undefined') {
         notes: new Array(Sudoku.CELLS).fill(0),
         initialGivens: puzzle.filter((v) => v !== 0).length,
         mistakes: 0,
+        hintsUsed: 0,
         seconds: 0,
         history: [],
         status: 'playing', // playing | paused | won | lost
@@ -393,6 +396,9 @@ if (typeof document !== 'undefined') {
           const hinted = s.history.filter((h) => h && h.hint).length;
           s.initialGivens = s.puzzle.filter((v) => v !== 0).length - hinted;
         }
+        if (typeof s.hintsUsed !== 'number') {
+          s.hintsUsed = s.history.filter((h) => h && h.hint).length;
+        }
         return s;
       } catch (e) {
         return null;
@@ -430,6 +436,11 @@ if (typeof document !== 'undefined') {
     const btnNotes = $('btn-notes');
     const btnHint = $('btn-hint');
     const notesBadge = $('notes-badge');
+    const hintBadge = $('hint-badge');
+    const hintPanel = $('hint-panel');
+    const hintTechnique = $('hint-technique');
+    const hintText = $('hint-text');
+    const hintValue = $('hint-value');
     const modalDifficulty = $('modal-difficulty');
     const modalWin = $('modal-win');
     const modalLose = $('modal-lose');
@@ -551,8 +562,11 @@ if (typeof document !== 'undefined') {
           selected >= 0 &&
           (Sudoku.ROW[i] === selRow || Sudoku.COL[i] === selCol || Sudoku.BOX[i] === selBox);
         cls.toggle('selected', !paused && i === selected);
-        cls.toggle('same', !paused && i !== selected && selVal !== 0 && v === selVal);
-        cls.toggle('highlight', !paused && i !== selected && inUnit && !(selVal !== 0 && v === selVal));
+        cls.toggle('same', !paused && !hintView && i !== selected && selVal !== 0 && v === selVal);
+        cls.toggle('highlight', !paused && !hintView && i !== selected && inUnit && !(selVal !== 0 && v === selVal));
+        cls.toggle('hint-target', !paused && !!hintView && i === hintView.idx);
+        cls.toggle('hint-reason', !paused && !!hintView && hintView.reason.includes(i));
+        cls.toggle('hint-unit', !paused && !!hintView && i !== hintView.idx && hintView.unit.includes(i) && !hintView.reason.includes(i));
 
         const mask = paused || v ? 0 : state.notes[i];
         const spans = noteEls[i];
@@ -580,7 +594,10 @@ if (typeof document !== 'undefined') {
       const playing = state.status === 'playing';
       btnUndo.disabled = !playing || state.history.length === 0;
       btnErase.disabled = !playing;
-      btnHint.disabled = !playing;
+      const hintsLeft = Math.max(0, MAX_HINTS - state.hintsUsed);
+      btnHint.disabled = !playing || hintsLeft <= 0;
+      hintBadge.textContent = String(hintsLeft);
+      btnHint.title = hintsLeft > 0 ? `Còn ${hintsLeft} lượt gợi ý` : 'Đã hết lượt gợi ý';
       btnNotes.disabled = !playing;
       btnNotes.classList.toggle('active', notesMode);
       btnNotes.setAttribute('aria-pressed', String(notesMode));
@@ -616,6 +633,7 @@ if (typeof document !== 'undefined') {
 
     function pauseGame() {
       if (!state || state.status !== 'playing') return;
+      closeHint();
       state.status = 'paused';
       save();
       renderAll();
@@ -631,6 +649,7 @@ if (typeof document !== 'undefined') {
     /* ---------------- Game actions ---------------- */
     function selectCell(i) {
       if (!state || state.status !== 'playing') return;
+      closeHint();
       selected = i;
       renderBoard();
     }
@@ -656,6 +675,7 @@ if (typeof document !== 'undefined') {
     function inputNumber(d) {
       if (!state || state.status !== 'playing') return;
       if (selected < 0) return;
+      closeHint();
       const idx = selected;
       if (state.puzzle[idx] !== 0) return; // ô đề bài, không sửa
       if (state.board[idx] !== 0 && state.board[idx] === state.solution[idx]) return; // đã đúng
@@ -702,6 +722,7 @@ if (typeof document !== 'undefined') {
 
     function erase() {
       if (!state || state.status !== 'playing' || selected < 0) return;
+      closeHint();
       const idx = selected;
       if (state.puzzle[idx] !== 0) return;
       if (state.board[idx] !== 0 && state.board[idx] === state.solution[idx]) return;
@@ -715,6 +736,7 @@ if (typeof document !== 'undefined') {
 
     function undo() {
       if (!state || state.status !== 'playing') return;
+      closeHint();
       const entry = state.history.pop();
       if (!entry) return;
       if (entry.hint) state.puzzle[entry.idx] = 0;
@@ -726,19 +748,183 @@ if (typeof document !== 'undefined') {
       renderAll();
     }
 
+    /* ---------------- Gợi ý có giải thích ---------------- */
+    // Các đơn vị (hàng, cột, vùng 3x3) dùng cho suy luận
+    const UNITS = [];
+    for (let u = 0; u < 9; u++) {
+      const row = [];
+      const col = [];
+      const box = [];
+      for (let k = 0; k < 9; k++) {
+        row.push(u * 9 + k);
+        col.push(k * 9 + u);
+        box.push((Math.floor(u / 3) * 3 + Math.floor(k / 3)) * 9 + (u % 3) * 3 + (k % 3));
+      }
+      UNITS.push({ type: 'row', index: u, cells: row });
+      UNITS.push({ type: 'col', index: u, cells: col });
+      UNITS.push({ type: 'box', index: u, cells: box });
+    }
+
+    function unitName(unit) {
+      if (unit.type === 'row') return `hàng ${unit.index + 1}`;
+      if (unit.type === 'col') return `cột ${unit.index + 1}`;
+      const br = Math.floor(unit.index / 3) * 3;
+      const bc = (unit.index % 3) * 3;
+      return `vùng 3x3 (hàng ${br + 1}–${br + 3}, cột ${bc + 1}–${bc + 3})`;
+    }
+
+    function cellName(idx) {
+      return `hàng ${Sudoku.ROW[idx] + 1}, cột ${Sudoku.COL[idx] + 1}`;
+    }
+
+    /** Bàn cờ chỉ gồm các số đúng (số sai được coi như ô trống khi suy luận). */
+    function trustedBoard() {
+      return state.board.map((v, i) => (v !== 0 && v === state.solution[i] ? v : 0));
+    }
+
+    /** Bitmask các số còn có thể điền vào ô idx theo bàn cờ b. */
+    function candidateMask(b, idx) {
+      let used = 0;
+      for (const p of Sudoku.PEERS[idx]) if (b[p]) used |= 1 << (b[p] - 1);
+      return 0x1ff & ~used;
+    }
+
+    /** Ô chỉ còn một số khả dĩ (naked single). */
+    function nakedSingleAt(b, idx) {
+      if (b[idx]) return null;
+      const mask = candidateMask(b, idx);
+      if (mask === 0 || mask & (mask - 1)) return null;
+      const d = 31 - Math.clz32(mask) + 1;
+      // Các ô đã "loại" những số khác: mỗi số khác lấy các peer đang chứa số đó
+      const reason = new Set();
+      const others = [];
+      for (let e = 1; e <= 9; e++) {
+        if (e === d) continue;
+        others.push(e);
+        for (const p of Sudoku.PEERS[idx]) if (b[p] === e) reason.add(p);
+      }
+      return {
+        idx,
+        value: d,
+        technique: 'Ô chỉ còn một số',
+        text:
+          `Ô ${cellName(idx)} chỉ có thể là ${d}. ` +
+          `Tám số còn lại (${others.join(', ')}) đều đã xuất hiện trong hàng, cột hoặc vùng 3x3 chứa ô này (các ô được đánh dấu vàng).`,
+        reason: [...reason],
+        unit: Sudoku.PEERS[idx],
+      };
+    }
+
+    /** Trong một đơn vị, số d chỉ có đúng một vị trí (hidden single). */
+    function hiddenSingleIn(b, unit, d) {
+      const bit = 1 << (d - 1);
+      if (unit.cells.some((c) => b[c] === d)) return null;
+      const spots = unit.cells.filter((c) => !b[c] && candidateMask(b, c) & bit);
+      if (spots.length !== 1) return null;
+      const idx = spots[0];
+      // Các số d đang chặn những ô trống khác trong đơn vị
+      const reason = new Set();
+      for (const c of unit.cells) {
+        if (b[c] || c === idx) continue;
+        const blocker = Sudoku.PEERS[c].find((p) => b[p] === d);
+        if (blocker !== undefined) reason.add(blocker);
+      }
+      const name = unitName(unit);
+      return {
+        idx,
+        value: d,
+        technique: 'Số chỉ có một vị trí',
+        text:
+          `Trong ${name}, số ${d} chỉ có thể đặt vào ô ${cellName(idx)}. ` +
+          `Mọi ô trống khác của ${name} đều nằm cùng hàng, cột hoặc vùng 3x3 với một số ${d} đã có (các ô được đánh dấu vàng), nên không thể chứa ${d}.`,
+        reason: [...reason],
+        unit: unit.cells,
+      };
+    }
+
+    /** Tìm bước gợi ý tốt nhất kèm giải thích. */
+    function findHint() {
+      // 1. Có số sai trên bàn cờ: chỉ ra ô sai trước
+      const wrong = [];
+      for (let i = 0; i < Sudoku.CELLS; i++) {
+        if (state.board[i] !== 0 && state.board[i] !== state.solution[i]) wrong.push(i);
+      }
+      if (wrong.length) {
+        const idx = wrong.includes(selected) ? selected : wrong[0];
+        return {
+          idx,
+          value: state.solution[idx],
+          technique: 'Có số sai',
+          text: `Số ${state.board[idx]} ở ô ${cellName(idx)} không đúng, đáp án của ô này là ${state.solution[idx]}. Hãy sửa ô sai trước khi suy luận tiếp.`,
+          reason: [],
+          unit: [],
+        };
+      }
+
+      const b = trustedBoard();
+      // 2. Ưu tiên ô đang chọn nếu có thể suy luận ngay tại đó
+      if (selected >= 0 && !b[selected]) {
+        const ns = nakedSingleAt(b, selected);
+        if (ns) return ns;
+        for (const unit of UNITS) {
+          if (!unit.cells.includes(selected)) continue;
+          const hs = hiddenSingleIn(b, unit, state.solution[selected]);
+          if (hs && hs.idx === selected) return hs;
+        }
+      }
+      // 3. Quét toàn bàn: naked single trước, rồi hidden single
+      for (let i = 0; i < Sudoku.CELLS; i++) {
+        const ns = nakedSingleAt(b, i);
+        if (ns) return ns;
+      }
+      for (const unit of UNITS) {
+        for (let d = 1; d <= 9; d++) {
+          const hs = hiddenSingleIn(b, unit, d);
+          if (hs) return hs;
+        }
+      }
+      // 4. Không có bước đơn giản: đưa đáp án của ô đang chọn (hoặc ô trống đầu tiên)
+      let idx = selected >= 0 && !b[selected] ? selected : b.indexOf(0);
+      if (idx < 0) return null;
+      return {
+        idx,
+        value: state.solution[idx],
+        technique: 'Cần kỹ thuật nâng cao',
+        text: `Ở trạng thái hiện tại không có ô nào suy ra được bằng hai kỹ thuật cơ bản (ô chỉ còn một số, số chỉ có một vị trí). Đáp án của ô ${cellName(idx)} là ${state.solution[idx]}.`,
+        reason: [],
+        unit: [],
+      };
+    }
+
     function hint() {
       if (!state || state.status !== 'playing') return;
-      let idx = selected;
-      // Nếu chưa chọn hoặc ô đã đúng, chọn ngẫu nhiên một ô chưa đúng
-      if (idx < 0 || state.puzzle[idx] !== 0 || state.board[idx] === state.solution[idx]) {
-        const candidates = [];
-        for (let i = 0; i < Sudoku.CELLS; i++) {
-          if (state.puzzle[i] === 0 && state.board[i] !== state.solution[i]) candidates.push(i);
-        }
-        if (candidates.length === 0) return;
-        idx = candidates[Math.floor(Math.random() * candidates.length)];
-      }
-      const d = state.solution[idx];
+      if (state.hintsUsed >= MAX_HINTS) return;
+      const h = findHint();
+      if (!h) return;
+      state.hintsUsed++; // lượt gợi ý tính từ lúc xem, không hoàn lại
+      hintView = h;
+      selected = h.idx;
+      hintTechnique.textContent = h.technique;
+      hintText.textContent = h.text;
+      hintValue.textContent = String(h.value);
+      hintPanel.hidden = false;
+      save();
+      renderAll();
+      hintPanel.scrollIntoView({ block: 'nearest', behavior: 'smooth' });
+    }
+
+    function closeHint() {
+      if (!hintView) return;
+      hintView = null;
+      hintPanel.hidden = true;
+      renderBoard();
+    }
+
+    function applyHint() {
+      if (!hintView || !state || state.status !== 'playing') return;
+      const { idx, value: d } = hintView;
+      closeHint();
+      if (state.board[idx] === d) return;
       const entry = { idx, prevValue: state.board[idx], prevNotes: state.notes[idx], peers: [], hint: true };
       state.board[idx] = d;
       state.notes[idx] = 0;
@@ -746,6 +932,7 @@ if (typeof document !== 'undefined') {
       entry.peers = clearPeerNotes(idx, d);
       pushHistory(entry);
       selected = idx;
+      animateCell(idx, 'pop');
 
       if (isSolved()) {
         finishWin();
@@ -788,6 +975,7 @@ if (typeof document !== 'undefined') {
 
     /* ---------------- New game / retry ---------------- */
     function newGame(difficulty) {
+      closeHint();
       const target = DIFFICULTIES[difficulty].givens;
       const { puzzle, solution } = Sudoku.generatePuzzle(target);
       state = createState(difficulty, puzzle, solution);
@@ -800,6 +988,7 @@ if (typeof document !== 'undefined') {
 
     function retryGame() {
       if (!state) return;
+      closeHint();
       // Khôi phục đề gốc: bỏ các ô gợi ý đã được ghi vào puzzle
       for (const entry of state.history) {
         if (entry.hint) state.puzzle[entry.idx] = 0;
@@ -807,6 +996,7 @@ if (typeof document !== 'undefined') {
       state.board = state.puzzle.slice();
       state.notes = new Array(Sudoku.CELLS).fill(0);
       state.mistakes = 0;
+      state.hintsUsed = 0;
       state.seconds = 0;
       state.history = [];
       state.status = 'playing';
@@ -927,6 +1117,9 @@ if (typeof document !== 'undefined') {
     btnErase.addEventListener('click', erase);
     btnNotes.addEventListener('click', toggleNotes);
     btnHint.addEventListener('click', hint);
+    $('btn-hint-apply').addEventListener('click', applyHint);
+    $('btn-hint-close').addEventListener('click', closeHint);
+    $('btn-hint-self').addEventListener('click', closeHint);
 
     modalDifficulty.querySelectorAll('[data-close]').forEach((b) => {
       b.addEventListener('click', () => {
@@ -981,6 +1174,9 @@ if (typeof document !== 'undefined') {
         e.preventDefault();
       } else if (key === 'h' || key === 'H') {
         hint();
+        e.preventDefault();
+      } else if (key === 'Escape' && hintView) {
+        closeHint();
         e.preventDefault();
       } else if (key === 'p' || key === 'P' || key === 'Escape') {
         if (state.status === 'playing') pauseGame();

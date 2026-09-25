@@ -11,7 +11,8 @@ Game Sudoku chạy trên web, viết bằng HTML + CSS + JavaScript thuần. Kh�
 - Hiển thị tiến độ: số ô đã điền đúng / tổng số ô trống, kèm thanh tiến độ.
 - Timer, tạm dừng (che bàn cờ), tự tạm dừng khi chuyển tab.
 - Ghi chú (bút chì): số nhỏ trong ô, tự xóa ghi chú liên quan khi điền đúng vào hàng / cột / vùng.
-- Hoàn tác, Xóa, Gợi ý (điền đáp án đúng vào ô đang chọn).
+- Hoàn tác, Xóa.
+- Gợi ý có giải thích (1 lượt mỗi ván): tìm ô suy ra được bằng kỹ thuật cơ bản, giải thích vì sao và đánh dấu các ô liên quan trên bàn cờ. Thứ tự ưu tiên: chỉ ra ô đang sai → ô chỉ còn một số khả dĩ → số chỉ có một vị trí trong hàng/cột/vùng → nếu không có bước đơn giản thì cho đáp án của ô đang chọn. Người chơi có thể "Điền số" hoặc "Tự điền".
 - Bàn phím số 1–9 hiện số lượng còn lại, ẩn khi đã đủ 9.
 - Nhấp ô: tô sáng hàng, cột, vùng 3x3 và các ô cùng số.
 - Tự lưu ván đang chơi vào `localStorage`, mở lại trang thì tiếp tục.
@@ -39,7 +40,7 @@ app.js          Engine (sinh đề, solver) + logic game + render
 sudoku-test.js  Test engine chạy bằng Node
 ```
 
-Số ván cần thắng để mở khóa mỗi độ khó nằm trong hằng `DIFFICULTIES` (trường `unlockWins`) ở đầu phần game trong `app.js`.
+Số ván cần thắng để mở khóa mỗi độ khó nằm trong hằng `DIFFICULTIES` (trường `unlockWins`), số lượt gợi ý mỗi ván nằm trong hằng `MAX_HINTS`, đều ở đầu phần game trong `app.js`.
 
 ## Kiểm tra engine
 

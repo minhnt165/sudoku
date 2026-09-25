@@ -63,6 +63,28 @@
       </div>
     </main>
 
+    <section class="hint-panel card" id="hint-panel" hidden aria-live="polite">
+      <div class="hint-head">
+        <span class="hint-title">
+          <svg class="icon" viewBox="0 0 24 24" aria-hidden="true"><path d="M9 21c0 .55.45 1 1 1h4c.55 0 1-.45 1-1v-1H9v1zm3-19C8.14 2 5 5.14 5 9c0 2.38 1.19 4.47 3 5.74V17c0 .55.45 1 1 1h6c.55 0 1-.45 1-1v-2.26c1.81-1.27 3-3.36 3-5.74 0-3.86-3.14-7-7-7z"/></svg>
+          Gợi ý · <span id="hint-technique"></span>
+        </span>
+        <button class="btn-icon" id="btn-hint-close" type="button" aria-label="Đóng gợi ý">
+          <svg class="icon" viewBox="0 0 24 24" aria-hidden="true"><path d="M6 6l12 12M18 6L6 18" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" fill="none"/></svg>
+        </button>
+      </div>
+      <p class="hint-body" id="hint-text"></p>
+      <div class="hint-legend" aria-hidden="true">
+        <span><i class="swatch target"></i>Ô cần điền</span>
+        <span><i class="swatch reason"></i>Ô liên quan</span>
+        <span><i class="swatch unit"></i>Phạm vi xét</span>
+      </div>
+      <div class="hint-actions">
+        <button class="btn btn-ghost" id="btn-hint-self" type="button">Tự điền</button>
+        <button class="btn btn-primary" id="btn-hint-apply" type="button">Điền số <b id="hint-value"></b></button>
+      </div>
+    </section>
+
     <section class="tools">
       <button class="tool" id="btn-undo" type="button">
         <span class="tool-icon">
@@ -85,6 +107,7 @@
       </button>
       <button class="tool" id="btn-hint" type="button">
         <span class="tool-icon">
+          <span class="tool-badge" id="hint-badge">1</span>
           <svg class="icon" viewBox="0 0 24 24" aria-hidden="true"><path d="M9 21c0 .55.45 1 1 1h4c.55 0 1-.45 1-1v-1H9v1zm3-19C8.14 2 5 5.14 5 9c0 2.38 1.19 4.47 3 5.74V17c0 .55.45 1 1 1h6c.55 0 1-.45 1-1v-2.26c1.81-1.27 3-3.36 3-5.74 0-3.86-3.14-7-7-7z"/></svg>
         </span>
         <span class="tool-label">Gợi ý</span>
