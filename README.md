@@ -5,19 +5,22 @@ Game Sudoku chạy trên web, viết bằng HTML + CSS + JavaScript thuần. Kh�
 ## Tính năng
 
 - Sinh đề ngẫu nhiên: tạo lưới đầy bằng backtracking, rồi xóa ô và kiểm tra nghiệm duy nhất bằng solver. Mọi đề sinh ra đều có đúng một nghiệm.
-- 5 độ khó theo số ô cho trước: Dễ (40) / Trung bình (34) / Khó (29) / Chuyên gia (25) / Cực khó (22).
+- 5 độ khó chấm theo kỹ thuật suy luận cần dùng (xem mục "Cách chấm độ khó"), không chỉ theo số ô cho trước: Dễ / Trung bình / Khó / Chuyên gia / Cực khó.
+- Ván hằng ngày: mỗi ngày một đề chung cho mọi người, độ khó theo thứ trong tuần, tính chuỗi ngày hoàn thành.
 - Khóa độ khó: phải thắng 3 ván ở độ khó hiện tại để mở độ khó tiếp theo. Tiến trình lưu trong trình duyệt.
 - Đếm lỗi, tối đa 3 lỗi thì thua. Số sai được so với đáp án và tô đỏ.
 - Hiển thị tiến độ: số ô đã điền đúng / tổng số ô trống, kèm thanh tiến độ.
 - Timer, tạm dừng (che bàn cờ), tự tạm dừng khi chuyển tab.
 - Ghi chú (bút chì): số nhỏ trong ô, tự xóa ghi chú liên quan khi điền đúng vào hàng / cột / vùng.
 - Hoàn tác, Xóa.
-- Gợi ý có giải thích (1 lượt mỗi ván): tìm ô suy ra được bằng kỹ thuật cơ bản, giải thích vì sao và đánh dấu các ô liên quan trên bàn cờ. Thứ tự ưu tiên: chỉ ra ô đang sai → ô chỉ còn một số khả dĩ → số chỉ có một vị trí trong hàng/cột/vùng → nếu không có bước đơn giản thì cho đáp án của ô đang chọn. Người chơi có thể "Điền số" hoặc "Tự điền".
+- Gợi ý có giải thích (1 lượt mỗi ván): chạy solver kỹ thuật tới bước điền số đầu tiên, giải thích bằng tiếng Việt và đánh dấu ô cần điền, ô liên quan, ô bị loại ứng viên. Thứ tự: chỉ ra ô đang sai → single tại ô đang chọn → single bất kỳ → bước loại trừ (cặp chỉ hướng, cặp trần/ẩn, bộ ba, X-Wing, XY-Wing, Swordfish) dẫn tới một single → nếu bế tắc thì cho đáp án của ô đang chọn. "Điền số" cũng xóa các ghi chú đã bị loại trong lập luận.
+- Cài đặt: giao diện Tự động / Sáng / Tối; cách nhập "chọn ô trước" hoặc "chọn số trước" (nhấn số rồi chạm nhiều ô); bật/tắt báo lỗi ngay (tắt thì tự kiểm tra, không đếm lỗi, được ghi đè ô đã điền, báo khi bàn cờ đầy mà còn sai); bật/tắt giới hạn 3 lỗi.
+- Thống kê: số ván thắng / thua, thời gian tốt nhất và trung bình theo độ khó; chuỗi ngày, số ngày và thời gian tốt nhất của ván hằng ngày. Có nút đặt lại.
 - Bàn phím số 1–9 hiện số lượng còn lại, ẩn khi đã đủ 9.
 - Nhấp ô: tô sáng hàng, cột, vùng 3x3 và các ô cùng số.
 - Tự lưu ván đang chơi vào `localStorage`, mở lại trang thì tiếp tục.
 - Màn hình thắng (thời gian, độ khó, lỗi, thông báo mở khóa) và màn hình thua (chơi lại / ván mới).
-- Giao diện tiếng Việt, responsive trên điện thoại, dark mode theo hệ thống.
+- Giao diện tiếng Việt, responsive trên điện thoại, dark mode theo hệ thống hoặc chọn thủ công. Cho phép zoom trang; bàn cờ điều hướng bằng phím mũi tên với một điểm dừng Tab duy nhất.
 
 ## Phím tắt
 

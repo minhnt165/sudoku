@@ -981,8 +981,8 @@
     state.status = 'won';
     const notes = [];
     if (state.daily) {
-      const c = stats.daily.completed;
-      c[state.daily] = c[state.daily] ? Math.min(c[state.daily], state.seconds) : state.seconds;
+      const prev = dailyTime(state.daily);
+      stats.daily.completed[state.daily] = prev === null ? state.seconds : Math.min(prev, state.seconds);
       notes.push(`📅 Hoàn thành ván hằng ngày · chuỗi ${dailyStreak()} ngày`);
       state.unlocked = null;
     } else {
@@ -1040,15 +1040,16 @@
     // Ván hằng ngày
     const dateKey = todayKey();
     const dKey = dailyDifficulty(dateKey);
-    const doneTime = stats.daily.completed[dateKey];
+    const doneTime = dailyTime(dateKey);
     const streak = dailyStreak();
     const daily = document.createElement('button');
     daily.type = 'button';
     daily.className = 'difficulty-option daily';
     if (state && state.daily === dateKey) daily.classList.add('current');
-    const badge = doneTime
-      ? `<span class="difficulty-badge done">✓ ${formatTime(doneTime)}</span>`
-      : `<span class="difficulty-badge wins">Hôm nay</span>`;
+    const badge =
+      doneTime !== null
+        ? `<span class="difficulty-badge done">✓ ${formatTime(doneTime)}</span>`
+        : `<span class="difficulty-badge wins">Hôm nay</span>`;
     daily.innerHTML = `
       <span class="difficulty-cal" aria-hidden="true">${CAL_SVG}</span>
       <span class="difficulty-text">
@@ -1180,8 +1181,9 @@
 
   /* ---------------- Thống kê ---------------- */
   function renderStats() {
-    const dailyDone = Object.keys(stats.daily.completed).length;
-    const dailyBest = dailyDone ? Math.min(...Object.values(stats.daily.completed)) : null;
+    const times = Object.values(stats.daily.completed).filter((v) => typeof v === 'number');
+    const dailyDone = times.length;
+    const dailyBest = dailyDone ? Math.min(...times) : null;
     $('stats-streak').textContent = String(dailyStreak());
     $('stats-daily-total').textContent = String(dailyDone);
     $('stats-daily-best').textContent = dailyBest === null ? '—' : formatTime(dailyBest);
