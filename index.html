@@ -19,7 +19,7 @@
       if (t === 'light' || t === 'dark') document.documentElement.setAttribute('data-theme', t);
     } catch (e) {}
   </script>
-  <link rel="stylesheet" href="style.css">
+  <link rel="stylesheet" href="style.css?v=1.1.0">
 </head>
 <body>
   <div class="app" id="app">
@@ -198,6 +198,7 @@
         </label>
       </div>
       <button class="btn btn-primary" type="button" data-close="modal-settings">Xong</button>
+      <p class="app-version">Sudoku · phiên bản <span id="app-version">—</span></p>
     </div>
   </div>
 
@@ -255,7 +256,7 @@
     </div>
   </div>
 
-  <script src="engine.js"></script>
-  <script src="app.js"></script>
+  <script src="engine.js?v=1.1.0"></script>
+  <script src="app.js?v=1.1.0"></script>
 </body>
 </html>

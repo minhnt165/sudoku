@@ -6,6 +6,8 @@
  *   4. Gợi ý có giải thích dựa trên solver kỹ thuật của engine
  * ===================================================================== */
 (() => {
+  // Phiên bản app: tăng khi phát hành, đồng bộ với ?v= ở index.html để trình duyệt tải file mới
+  const APP_VERSION = '1.1.0';
   const STORAGE_KEY = 'sudoku-vn-save-v1';
   const PROGRESS_KEY = 'sudoku-vn-progress-v1';
   const SETTINGS_KEY = 'sudoku-vn-settings-v1';
@@ -287,6 +289,8 @@
   const difficultyWarning = $('difficulty-warning');
   const btnDifficultyCancel = $('btn-difficulty-cancel');
   const toastEl = $('toast');
+  const versionEl = $('app-version');
+  if (versionEl) versionEl.textContent = APP_VERSION;
 
   const cellEls = [];
   const noteEls = []; // noteEls[idx][d-1]

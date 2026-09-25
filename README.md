@@ -45,6 +45,8 @@ app.js          Logic game + render (cần engine.js nạp trước)
 sudoku-test.js  Test engine chạy bằng Node
 ```
 
+Phiên bản app nằm ở hằng `APP_VERSION` đầu `app.js` (hiển thị trong modal Cài đặt). Khi phát hành bản mới, tăng số này và sửa tham số `?v=` của `style.css`, `engine.js`, `app.js` trong `index.html` để trình duyệt tải file mới thay vì dùng bản cache.
+
 Số ván cần thắng để mở khóa mỗi độ khó nằm trong hằng `DIFFICULTIES` (trường `unlockWins`), mức kỹ thuật yêu cầu của từng độ khó (`minLevel` / `maxLevel`), số lượt gợi ý mỗi ván (`MAX_HINTS`) và lịch độ khó ván hằng ngày theo thứ (`DAILY_BY_WEEKDAY`) đều ở đầu `app.js`. Danh sách kỹ thuật và mức của chúng nằm trong `TECHNIQUES` ở `engine.js`.
 
 ## Cách chấm độ khó
