@@ -36,11 +36,29 @@ Game Sudoku chạy trên web, viết bằng HTML + CSS + JavaScript thuần. Kh�
 ```
 index.html      Khung trang, modal
 style.css       Giao diện, dark mode, responsive
-app.js          Engine (sinh đề, solver) + logic game + render
+engine.js       Engine: sinh đề, solver backtracking, solver theo kỹ thuật, chấm độ khó, PRNG có seed
+app.js          Logic game + render (cần engine.js nạp trước)
 sudoku-test.js  Test engine chạy bằng Node
 ```
 
-Số ván cần thắng để mở khóa mỗi độ khó nằm trong hằng `DIFFICULTIES` (trường `unlockWins`), số lượt gợi ý mỗi ván nằm trong hằng `MAX_HINTS`, đều ở đầu phần game trong `app.js`.
+Số ván cần thắng để mở khóa mỗi độ khó nằm trong hằng `DIFFICULTIES` (trường `unlockWins`), mức kỹ thuật yêu cầu của từng độ khó (`minLevel` / `maxLevel`), số lượt gợi ý mỗi ván (`MAX_HINTS`) và lịch độ khó ván hằng ngày theo thứ (`DAILY_BY_WEEKDAY`) đều ở đầu `app.js`. Danh sách kỹ thuật và mức của chúng nằm trong `TECHNIQUES` ở `engine.js`.
+
+## Cách chấm độ khó
+
+Sau khi sinh đề, engine giải lại đề bằng các kỹ thuật suy luận theo thứ tự từ dễ đến khó và ghi nhận mức cao nhất phải dùng:
+
+| Mức | Kỹ thuật | Độ khó |
+| --- | --- | --- |
+| 1 | Ô chỉ còn một số, số chỉ có một vị trí | Dễ (40 ô cho trước), Trung bình (34 ô) |
+| 2 | Cặp chỉ hướng, rút gọn theo hàng/cột, cặp trần | Khó |
+| 3 | Cặp ẩn, bộ ba trần / ẩn, X-Wing, XY-Wing, Swordfish | Chuyên gia |
+| 4 | Bế tắc với mọi kỹ thuật trên (cần chuỗi suy luận / thử sai) | Cực khó |
+
+Đề không đúng mức sẽ bị bỏ và sinh lại (tối đa 60 lần, thường dưới 100 ms). Gợi ý dùng cùng solver này nên luôn giải thích được bước tiếp theo bằng kỹ thuật tương ứng, kể cả các bước loại trừ ứng viên.
+
+## Ván hằng ngày
+
+Mỗi ngày có một đề chung cho mọi người chơi: seed sinh từ ngày (`sudoku-daily-YYYY-MM-DD`) qua PRNG mulberry32, nên cùng ngày thì mọi máy sinh ra cùng đề. Độ khó theo thứ: T2 Dễ, T3–T4 Trung bình, T5–T6 Khó, T7 Chuyên gia, CN Cực khó. Ván hằng ngày không cần mở khóa và không tính vào tiến trình mở khóa; kết quả lưu vào chuỗi ngày trong Thống kê.
 
 ## Kiểm tra engine
 

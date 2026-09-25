@@ -2,13 +2,19 @@
 <html lang="vi">
 <head>
   <meta charset="UTF-8">
-  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
   <meta name="color-scheme" content="light dark">
-  <meta name="theme-color" content="#f3f5fb" media="(prefers-color-scheme: light)">
-  <meta name="theme-color" content="#0f1217" media="(prefers-color-scheme: dark)">
-  <meta name="description" content="Sudoku tiếng Việt: 5 độ khó, ghi chú, gợi ý, tự lưu ván chơi.">
+  <meta name="theme-color" id="theme-color" content="#f3f5fb">
+  <meta name="description" content="Sudoku tiếng Việt: 5 độ khó chấm theo kỹ thuật, ván hằng ngày, gợi ý có giải thích, ghi chú, thống kê, tự lưu ván chơi.">
   <title>Sudoku</title>
   <link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 64 64'%3E%3Crect width='64' height='64' rx='14' fill='%233b6cf6'/%3E%3Cpath d='M12 12h40v40H12z' fill='none' stroke='%23fff' stroke-width='3'/%3E%3Cpath d='M25.3 12v40M38.7 12v40M12 25.3h40M12 38.7h40' stroke='%23fff' stroke-width='2' opacity='.8'/%3E%3C/svg%3E">
+  <script>
+    // Áp giao diện sáng/tối đã chọn trước khi vẽ trang để tránh nháy màu
+    try {
+      var t = JSON.parse(localStorage.getItem('sudoku-vn-settings-v1') || '{}').theme;
+      if (t === 'light' || t === 'dark') document.documentElement.setAttribute('data-theme', t);
+    } catch (e) {}
+  </script>
   <link rel="stylesheet" href="style.css">
 </head>
 <body>
@@ -20,10 +26,18 @@
         </span>
         <h1 class="logo">Sudoku</h1>
       </div>
-      <button class="btn btn-primary btn-new" id="btn-new" type="button">
-        <svg class="icon" viewBox="0 0 24 24" aria-hidden="true"><path d="M12 5v14M5 12h14" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" fill="none"/></svg>
-        <span>Ván mới</span>
-      </button>
+      <div class="topbar-actions">
+        <button class="btn-icon lg" id="btn-stats" type="button" aria-label="Thống kê" title="Thống kê">
+          <svg class="icon" viewBox="0 0 24 24" aria-hidden="true"><path d="M4 20V10h3v10H4zm6.5 0V4h3v16h-3zM17 20v-7h3v7h-3z"/></svg>
+        </button>
+        <button class="btn-icon lg" id="btn-settings" type="button" aria-label="Cài đặt" title="Cài đặt">
+          <svg class="icon" viewBox="0 0 24 24" aria-hidden="true"><path d="M19.4 13a7.6 7.6 0 0 0 0-2l2.1-1.6-2-3.5-2.5 1a7.5 7.5 0 0 0-1.7-1L15 3h-4l-.4 2.7a7.5 7.5 0 0 0-1.7 1l-2.5-1-2 3.5L6.6 11a7.6 7.6 0 0 0 0 2l-2.1 1.6 2 3.5 2.5-1a7.5 7.5 0 0 0 1.7 1L11 21h4l.4-2.7a7.5 7.5 0 0 0 1.7-1l2.5 1 2-3.5L19.4 13zM13 15.5a3.5 3.5 0 1 1 0-7 3.5 3.5 0 0 1 0 7z"/></svg>
+        </button>
+        <button class="btn btn-primary btn-new" id="btn-new" type="button">
+          <svg class="icon" viewBox="0 0 24 24" aria-hidden="true"><path d="M12 5v14M5 12h14" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" fill="none"/></svg>
+          <span>Ván mới</span>
+        </button>
+      </div>
     </header>
 
     <section class="status card">
@@ -33,7 +47,7 @@
       </div>
       <div class="status-item">
         <span class="status-label">Lỗi</span>
-        <span class="status-value" id="mistakes-label"><span id="mistakes-count">0</span><span class="dim">/3</span></span>
+        <span class="status-value" id="mistakes-label"><span id="mistakes-count">0</span><span class="dim" id="mistakes-max">/3</span></span>
       </div>
       <div class="status-item">
         <span class="status-label">Tiến độ</span>
@@ -61,6 +75,10 @@
         <p>Đã tạm dừng</p>
         <small>Nhấn để tiếp tục</small>
       </div>
+      <div class="board-overlay gen" id="gen-overlay" hidden aria-live="polite">
+        <span class="spinner" aria-hidden="true"></span>
+        <p>Đang tạo đề…</p>
+      </div>
     </main>
 
     <section class="hint-panel card" id="hint-panel" hidden aria-live="polite">
@@ -77,6 +95,7 @@
       <div class="hint-legend" aria-hidden="true">
         <span><i class="swatch target"></i>Ô cần điền</span>
         <span><i class="swatch reason"></i>Ô liên quan</span>
+        <span id="legend-elim" hidden><i class="swatch elim"></i>Ô bị loại số</span>
         <span><i class="swatch unit"></i>Phạm vi xét</span>
       </div>
       <div class="hint-actions">
@@ -119,15 +138,85 @@
     <p class="hint-text">Phím tắt: <kbd>1</kbd>–<kbd>9</kbd> điền số · <kbd>⌫</kbd> xóa · <kbd>N</kbd> ghi chú · <kbd>Z</kbd> hoàn tác · <kbd>H</kbd> gợi ý · <kbd>P</kbd> tạm dừng</p>
   </div>
 
+  <div class="toast" id="toast" role="status" hidden></div>
+
   <!-- Chọn độ khó -->
   <div class="modal" id="modal-difficulty" hidden>
     <div class="modal-backdrop" data-close="modal-difficulty"></div>
     <div class="modal-card" role="dialog" aria-modal="true" aria-labelledby="difficulty-title">
-      <h2 id="difficulty-title">Chọn độ khó</h2>
+      <h2 id="difficulty-title">Chọn ván chơi</h2>
       <p class="modal-note" id="difficulty-warning" hidden>Ván hiện tại sẽ bị mất.</p>
       <div class="difficulty-list" id="difficulty-list"></div>
-      <p class="modal-hint">Thắng đủ số ván ở độ khó hiện tại để mở khóa độ khó tiếp theo.</p>
+      <p class="modal-hint">Độ khó được chấm theo kỹ thuật suy luận cần dùng. Thắng đủ số ván ở độ khó hiện tại để mở khóa độ khó tiếp theo.</p>
       <button class="btn btn-ghost" type="button" data-close="modal-difficulty" id="btn-difficulty-cancel">Hủy</button>
+    </div>
+  </div>
+
+  <!-- Cài đặt -->
+  <div class="modal" id="modal-settings" hidden>
+    <div class="modal-backdrop" data-close="modal-settings"></div>
+    <div class="modal-card" role="dialog" aria-modal="true" aria-labelledby="settings-title">
+      <h2 id="settings-title">Cài đặt</h2>
+      <div class="settings-list">
+        <div class="setting">
+          <div class="setting-text">
+            <span class="setting-name">Giao diện</span>
+          </div>
+          <div class="segmented" role="radiogroup" aria-label="Giao diện" data-setting="theme">
+            <button type="button" role="radio" data-value="auto">Tự động</button>
+            <button type="button" role="radio" data-value="light">Sáng</button>
+            <button type="button" role="radio" data-value="dark">Tối</button>
+          </div>
+        </div>
+        <div class="setting setting-col">
+          <div class="setting-text">
+            <span class="setting-name">Cách nhập số</span>
+            <span class="setting-desc">Chọn số trước: nhấn một số trên bàn phím rồi chạm vào các ô cần điền.</span>
+          </div>
+          <div class="segmented" role="radiogroup" aria-label="Cách nhập số" data-setting="inputMode">
+            <button type="button" role="radio" data-value="cell">Chọn ô trước</button>
+            <button type="button" role="radio" data-value="number">Chọn số trước</button>
+          </div>
+        </div>
+        <label class="setting">
+          <div class="setting-text">
+            <span class="setting-name">Báo lỗi ngay</span>
+            <span class="setting-desc">Tô đỏ số sai ngay khi nhập và đếm lỗi. Tắt để tự kiểm tra.</span>
+          </div>
+          <input type="checkbox" class="switch" data-setting="checkErrors">
+        </label>
+        <label class="setting" id="setting-mistake-limit">
+          <div class="setting-text">
+            <span class="setting-name">Giới hạn 3 lỗi</span>
+            <span class="setting-desc">Thua khi mắc 3 lỗi. Cần bật "Báo lỗi ngay".</span>
+          </div>
+          <input type="checkbox" class="switch" data-setting="mistakeLimit">
+        </label>
+      </div>
+      <button class="btn btn-primary" type="button" data-close="modal-settings">Xong</button>
+    </div>
+  </div>
+
+  <!-- Thống kê -->
+  <div class="modal" id="modal-stats" hidden>
+    <div class="modal-backdrop" data-close="modal-stats"></div>
+    <div class="modal-card" role="dialog" aria-modal="true" aria-labelledby="stats-title">
+      <h2 id="stats-title">Thống kê</h2>
+      <p class="stats-section">Ván hằng ngày</p>
+      <dl class="result-stats">
+        <div><dt>Chuỗi ngày</dt><dd id="stats-streak">0</dd></div>
+        <div><dt>Đã xong</dt><dd id="stats-daily-total">0</dd></div>
+        <div><dt>Tốt nhất</dt><dd id="stats-daily-best">—</dd></div>
+      </dl>
+      <p class="stats-section">Theo độ khó</p>
+      <table class="stats-table">
+        <thead><tr><th>Mức</th><th>Thắng</th><th>Thua</th><th>Tốt nhất</th><th>TB</th></tr></thead>
+        <tbody id="stats-body"></tbody>
+      </table>
+      <div class="modal-actions">
+        <button class="btn btn-ghost" type="button" id="btn-stats-reset">Đặt lại</button>
+        <button class="btn btn-primary" type="button" data-close="modal-stats">Đóng</button>
+      </div>
     </div>
   </div>
 
@@ -162,6 +251,7 @@
     </div>
   </div>
 
+  <script src="engine.js"></script>
   <script src="app.js"></script>
 </body>
 </html>
