@@ -34,6 +34,9 @@
   --shadow-sm: 0 3px 12px rgba(20, 32, 68, 0.08);
   --radius: 16px;
   --radius-sm: 12px;
+  /* Chiều cao ước tính của các phần ngoài bàn cờ (topbar + status + tools + numpad + khoảng cách)
+     dùng để co bàn cờ lại trên màn hình thấp, tránh phải cuộn khi chơi */
+  --ui-h: 340px;
 }
 
 /* Giao diện tối: theo hệ thống (trừ khi chọn Sáng) hoặc khi chọn Tối */
@@ -126,6 +129,9 @@ html, body {
   touch-action: pan-x pan-y;
   -webkit-text-size-adjust: 100%;
   text-size-adjust: 100%;
+  /* Không bounce / kéo-để-tải-lại khi vuốt trên mobile */
+  overscroll-behavior: none;
+  -webkit-touch-callout: none;
 }
 
 body {
@@ -166,7 +172,8 @@ button:disabled { cursor: default; }
 .app {
   width: 100%;
   max-width: 520px;
-  padding: 12px 12px calc(20px + env(safe-area-inset-bottom));
+  padding: calc(12px + env(safe-area-inset-top)) calc(12px + env(safe-area-inset-right))
+    calc(20px + env(safe-area-inset-bottom)) calc(12px + env(safe-area-inset-left));
   display: flex;
   flex-direction: column;
   gap: 12px;
@@ -217,9 +224,7 @@ button:disabled { cursor: default; }
   color: var(--primary-text);
   box-shadow: 0 6px 16px rgba(59, 108, 246, 0.3);
 }
-.btn-primary:hover { background: var(--primary-strong); }
 .btn-ghost { background: var(--btn-bg); color: var(--btn-text); }
-.btn-ghost:hover { background: var(--btn-bg-hover); }
 .btn-new { padding: 9px 14px; }
 .topbar-actions { display: flex; align-items: center; gap: 8px; }
 .btn-icon.lg { width: 38px; height: 38px; }
@@ -281,8 +286,15 @@ button:disabled { cursor: default; }
   align-items: center;
   justify-content: center;
   transition: background-color 0.15s;
+  position: relative;
 }
-.btn-icon:hover { background: var(--btn-bg-hover); }
+/* Mở rộng vùng chạm của nút tròn nhỏ (tạm dừng, đóng gợi ý) lên tối thiểu 44px */
+.btn-icon::before {
+  content: "";
+  position: absolute;
+  inset: -7px;
+  border-radius: 50%;
+}
 .btn-icon .icon { width: 16px; height: 16px; }
 .btn-icon .icon-play { display: none; }
 .app.is-paused .btn-icon .icon-pause { display: none; }
@@ -291,10 +303,15 @@ button:disabled { cursor: default; }
 /* ---------- Board ---------- */
 .board-wrap {
   position: relative;
-  width: 100%;
+  /* Co bàn cờ theo chiều cao màn hình để toàn bộ giao diện nằm gọn không cần cuộn */
+  width: min(100%, calc(100vh - var(--ui-h)));
+  width: min(100%, calc(100dvh - var(--ui-h)));
+  min-width: min(100%, 300px);
+  margin: 0 auto;
   aspect-ratio: 1 / 1;
   border-radius: 10px;
   box-shadow: var(--shadow-sm);
+  container-type: inline-size;
 }
 
 .board {
@@ -316,8 +333,8 @@ button:disabled { cursor: default; }
   justify-content: center;
   border-right: 1px solid var(--line);
   border-bottom: 1px solid var(--line);
-  font-size: clamp(1.1rem, 5.2vw, 1.9rem);
-  font-weight: 500;
+  font-size: clamp(1.25rem, 6.4vw, 2.2rem);
+  font-weight: 600;
   color: var(--filled);
   background: var(--cell-bg);
   transition: background-color 0.1s;
@@ -392,7 +409,7 @@ button:disabled { cursor: default; }
   display: grid;
   grid-template-columns: repeat(3, 1fr);
   grid-template-rows: repeat(3, 1fr);
-  font-size: clamp(0.5rem, 2vw, 0.75rem);
+  font-size: clamp(0.56rem, 2.5vw, 0.82rem);
   font-weight: 500;
   color: var(--note);
   line-height: 1;
@@ -437,7 +454,6 @@ button:disabled { cursor: default; }
   margin-bottom: 6px;
   transition: transform 0.12s;
 }
-.overlay-play:hover { transform: scale(1.05); }
 .overlay-play .icon { width: 38px; height: 38px; margin-left: 4px; }
 .board-overlay p { margin: 0; }
 .board-overlay.gen { z-index: 3; }
@@ -531,7 +547,6 @@ button:disabled { cursor: default; }
   justify-content: center;
   transition: background-color 0.15s, transform 0.08s;
 }
-.tool:not(:disabled):hover .tool-icon { background: var(--btn-bg-hover); }
 .tool:not(:disabled):active .tool-icon { transform: scale(0.94); }
 .tool-icon .icon { width: 24px; height: 24px; }
 .tool-badge {
@@ -562,17 +577,17 @@ button:disabled { cursor: default; }
   align-items: center;
   justify-content: center;
   aspect-ratio: 1 / 1.25;
+  min-height: 52px;
   border-radius: 10px;
   background: var(--surface);
   color: var(--btn-text);
-  font-size: clamp(1.3rem, 6vw, 2rem);
-  font-weight: 500;
+  font-size: clamp(1.5rem, 7.5vw, 2.2rem);
+  font-weight: 600;
   line-height: 1;
   gap: 3px;
   box-shadow: var(--shadow-sm);
   transition: background-color 0.12s, transform 0.08s, opacity 0.2s, visibility 0.2s;
 }
-.num:hover { background: var(--btn-bg); }
 .num:active { transform: scale(0.95); }
 .num .count {
   font-size: 0.65rem;
@@ -583,8 +598,7 @@ button:disabled { cursor: default; }
 .num.active { background: var(--primary); color: var(--primary-text); box-shadow: 0 6px 16px rgba(59, 108, 246, 0.3); }
 .num.active .count { color: rgba(255, 255, 255, 0.8); }
 .app.number-first .num { border: 1.5px solid transparent; }
-.app.number-first .num:not(.active):not(:disabled):hover { border-color: var(--primary); }
-.app.notes-mode .num { font-size: clamp(1rem, 4.5vw, 1.4rem); color: var(--note); }
+.app.notes-mode .num { font-size: clamp(1.15rem, 5.5vw, 1.6rem); color: var(--note); }
 .app.notes-mode .num .count { display: none; }
 
 .hint-text {
@@ -628,7 +642,10 @@ kbd {
   width: 100%;
   max-width: 380px;
   max-height: calc(100vh - 32px);
+  max-height: calc(100dvh - 32px);
   overflow-y: auto;
+  -webkit-overflow-scrolling: touch;
+  overscroll-behavior: contain;
   background: var(--surface);
   border-radius: var(--radius);
   padding: 22px;
@@ -661,7 +678,6 @@ kbd {
   text-align: left;
   transition: background-color 0.12s, border-color 0.12s, transform 0.08s;
 }
-.difficulty-option:not(:disabled):hover { background: var(--btn-bg); border-color: var(--primary); }
 .difficulty-option:not(:disabled):active { transform: scale(0.98); }
 .difficulty-option:disabled { opacity: 0.6; }
 .difficulty-option.current { border-color: var(--primary); }
@@ -692,7 +708,6 @@ kbd {
 .difficulty-badge.locked { background: var(--lock); color: #fff; }
 .difficulty-badge.done { background: var(--success); color: #fff; }
 .difficulty-option.daily { border-color: rgba(23, 163, 107, 0.45); }
-.difficulty-option.daily:not(:disabled):hover { border-color: var(--success); }
 .difficulty-option.daily.current { border-color: var(--success); }
 .difficulty-cal { display: flex; color: var(--success); }
 .difficulty-cal .icon { width: 22px; height: 22px; }
@@ -836,23 +851,117 @@ kbd {
   font-size: 0.9rem;
 }
 
+/* ---------- Hover: chỉ áp dụng cho thiết bị có chuột, tránh "dính" màu sau khi chạm ---------- */
+@media (hover: hover) and (pointer: fine) {
+  .btn-primary:hover { background: var(--primary-strong); }
+  .btn-ghost:hover { background: var(--btn-bg-hover); }
+  .btn-icon:hover { background: var(--btn-bg-hover); }
+  .overlay-play:hover { transform: scale(1.05); }
+  .tool:not(:disabled):hover .tool-icon { background: var(--btn-bg-hover); }
+  .num:hover { background: var(--btn-bg); }
+  .app.number-first .num:not(.active):not(:disabled):hover { border-color: var(--primary); }
+  .difficulty-option:not(:disabled):hover { background: var(--btn-bg); border-color: var(--primary); }
+  .difficulty-option.daily:not(:disabled):hover { border-color: var(--success); }
+}
+
+/* Cỡ chữ trong ô tính theo bề rộng bàn cờ (không phải màn hình) khi trình duyệt hỗ trợ */
+@supports (font-size: 1cqi) {
+  .cell { font-size: clamp(1.25rem, 7cqi, 2.2rem); }
+  .notes { font-size: clamp(0.56rem, 2.7cqi, 0.82rem); }
+}
+
 /* ---------- Desktop tweaks ---------- */
 @media (min-width: 560px) {
   .app { padding-top: 24px; gap: 16px; }
-  .cell { font-size: 1.85rem; }
-  .notes { font-size: 0.72rem; }
-  .num { font-size: 1.7rem; }
-  .app.notes-mode .num { font-size: 1.2rem; }
+  .num { font-size: 1.9rem; }
+  .app.notes-mode .num { font-size: 1.3rem; }
   .hint-text { display: block; }
 }
 
+/* ---------- Mobile: modal dạng bottom sheet ---------- */
+@media (max-width: 559px) {
+  .modal { align-items: flex-end; padding: 0; }
+  .modal-card {
+    max-width: none;
+    max-height: calc(100vh - 40px);
+    max-height: calc(100dvh - 40px);
+    border-radius: 22px 22px 0 0;
+    padding: 14px 18px calc(20px + env(safe-area-inset-bottom));
+    animation: slide-up 0.25s cubic-bezier(0.2, 0.9, 0.3, 1);
+  }
+  /* Thanh kéo nhỏ phía trên modal */
+  .modal-card::before {
+    content: "";
+    display: block;
+    width: 40px;
+    height: 4px;
+    margin: 0 auto 4px;
+    border-radius: 999px;
+    background: var(--line);
+    flex: none;
+  }
+  .modal-card h2 { font-size: 1.25rem; }
+  .toast { bottom: calc(16px + env(safe-area-inset-bottom)); }
+}
+@keyframes slide-up {
+  from { transform: translateY(40px); opacity: 0; }
+  to { transform: translateY(0); opacity: 1; }
+}
+
+/* ---------- Màn hình thấp (điện thoại nhỏ) ---------- */
 @media (max-height: 700px) and (max-width: 559px) {
-  .app { gap: 8px; }
+  .app { gap: 8px; --ui-h: 310px; }
   .tool-icon { width: 44px; height: 44px; }
+  .tool { gap: 4px; font-size: 0.72rem; }
   .status { padding: 10px 12px 12px; }
+  .num { min-height: 46px; }
 }
 
 @media (max-width: 360px) {
   .status-label { font-size: 0.62rem; }
   .status-value { font-size: 0.9rem; }
+  .btn-new span { display: none; }
+  .btn-new { padding: 9px 11px; }
+  .numpad { gap: 4px; }
+}
+
+/* ---------- Điện thoại xoay ngang: bàn cờ bên trái, điều khiển bên phải ---------- */
+@media (orientation: landscape) and (max-height: 520px) {
+  .app {
+    max-width: none;
+    display: grid;
+    grid-template-columns: auto minmax(0, 1fr);
+    grid-template-areas:
+      "board top"
+      "board status"
+      "board hint"
+      "board tools"
+      "board numpad"
+      "board kbd";
+    column-gap: 16px;
+    row-gap: 8px;
+    align-content: start;
+    padding-top: calc(8px + env(safe-area-inset-top));
+    padding-bottom: calc(8px + env(safe-area-inset-bottom));
+  }
+  .topbar { grid-area: top; }
+  .status { grid-area: status; grid-template-columns: 1fr 1fr; gap: 8px 12px; }
+  .status-timer { align-items: flex-start; }
+  .board-wrap {
+    grid-area: board;
+    width: calc(100vh - 16px - env(safe-area-inset-top) - env(safe-area-inset-bottom));
+    width: calc(100dvh - 16px - env(safe-area-inset-top) - env(safe-area-inset-bottom));
+    min-width: 0;
+    margin: 0;
+    align-self: start;
+  }
+  .hint-panel { grid-area: hint; padding: 10px 12px; gap: 6px; }
+  .hint-legend { display: none; }
+  .tools { grid-area: tools; gap: 4px; }
+  .tool-icon { width: 42px; height: 42px; }
+  .tool { gap: 3px; font-size: 0.7rem; }
+  .numpad { grid-area: numpad; grid-template-columns: repeat(5, 1fr); gap: 6px; }
+  .num { aspect-ratio: auto; min-height: 0; height: 42px; flex-direction: row; gap: 4px; font-size: 1.35rem; }
+  .num .count { font-size: 0.6rem; }
+  .hint-text { grid-area: kbd; display: none; }
 }

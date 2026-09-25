@@ -21,6 +21,7 @@ Game Sudoku chạy trên web, viết bằng HTML + CSS + JavaScript thuần. Kh�
 - Tự lưu ván đang chơi vào `localStorage`, mở lại trang thì tiếp tục.
 - Màn hình thắng (thời gian, độ khó, lỗi, thông báo mở khóa) và màn hình thua (chơi lại / ván mới).
 - Giao diện tiếng Việt, responsive trên điện thoại, dark mode theo hệ thống hoặc chọn thủ công. Cho phép zoom trang; bàn cờ điều hướng bằng phím mũi tên với một điểm dừng Tab duy nhất.
+- Tối ưu mobile: bàn cờ tự co theo chiều cao màn hình để không phải cuộn khi chơi, cỡ số tính theo bề rộng bàn cờ, modal dạng bottom sheet, layout riêng khi xoay ngang (bàn cờ trái, điều khiển phải), tôn trọng safe-area (tai thỏ), không "dính" hover sau khi chạm, thêm được vào màn hình chính như app.
 
 ## Phím tắt
 
